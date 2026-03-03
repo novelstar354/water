@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FLUID SIM</title>
+<link rel="icon" href="https://illust8.com/wp-content/uploads/2021/03/baketsu_suidou_12683.png" sizes="16×16" type="image/png" /> 
+<style>
+body{margin:0;background:#0a0f1f;overflow:hidden;text-align:center;color:white;font-family:sans-serif;}
+canvas{display:block;margin:auto;background:#000814;box-shadow:0 0 40px cyan;}
+#ui{position:absolute;top:10px;left:50%;transform:translateX(-50%);}
+button{padding:8px 15px;margin:4px;border:none;border-radius:8px;font-weight:bold;background:#00ccff;}
+</style>
+</head>
+<body>
+
+<div id="ui">
+<button onclick="addWater()">💧水</button>
+<button onclick="addOil()">🛢油</button>
+<button onclick="addMagma()">🔥マグマ</button>
+<button onclick="rotateGravity()">🌀回転</button>
+<button onclick="reset()">🔄</button>
+</div>
+
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+let CELL=5;
+let cols,rows;
+let grid;
+let gravity = {x:0,y:1};
+
+function resize(){
+ canvas.width=Math.min(window.innerWidth*0.9,500);
+ canvas.height=window.innerHeight*0.8;
+ cols=Math.floor(canvas.width/CELL);
+ rows=Math.floor(canvas.height/CELL);
+ createGrid();
+}
+window.addEventListener("resize",resize);
+
+function createGrid(){
+ grid=[];
+ for(let y=0;y<rows;y++){
+  grid[y]=[];
+  for(let x=0;x<cols;x++) grid[y][x]=0;
+ }
+ createContainer();
+}
+
+function createContainer(){
+ let l=Math.floor(cols*0.2);
+ let r=Math.floor(cols*0.8);
+ let b=rows-3;
+ for(let y=5;y<b;y++){grid[y][l]=5;grid[y][r]=5;}
+ for(let x=l;x<=r;x++)grid[b][x]=5;
+}
+
+function addLiquid(type){
+ for(let i=0;i<80;i++){
+  let x=Math.floor(cols/2+(Math.random()*10-5));
+  grid[2][x]=type;
+ }
+}
+function addWater(){addLiquid(1);}
+function addOil(){addLiquid(2);}
+function addMagma(){addLiquid(3);}
+function reset(){createGrid();}
+
+function rotateGravity(){
+ if(gravity.y===1){gravity={x:1,y:0};}
+ else if(gravity.x===1){gravity={x:0,y:-1};}
+ else if(gravity.y===-1){gravity={x:-1,y:0};}
+ else gravity={x:0,y:1};
+}
+
+function update(){
+ for(let y=rows-2;y>=1;y--){
+  for(let x=1;x<cols-1;x++){
+   let t=grid[y][x];
+   if(t>=1 && t<=3){
+    let nx=x+gravity.x;
+    let ny=y+gravity.y;
+
+    if(grid[ny] && grid[ny][nx]===0){
+      grid[ny][nx]=t;
+      grid[y][x]=0;
+    } else {
+      let dir=Math.random()<0.5?-1:1;
+      let sx=gravity.y!==0?x+dir:x;
+      let sy=gravity.x!==0?y+dir:y;
+      if(grid[sy] && grid[sy][sx]===0){
+        grid[sy][sx]=t;
+        grid[y][x]=0;
+      }
+    }
+
+    // 水とマグマ反応
+    if(t===1){
+      for(let dx=-1;dx<=1;dx++){
+        for(let dy=-1;dy<=1;dy++){
+          if(grid[y+dy] && grid[y+dy][x+dx]===3){
+            grid[y][x]=0;
+            grid[y+dy][x+dx]=4; // 石
+          }
+        }
+      }
+    }
+   }
+  }
+ }
+}
+
+function draw(){
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ let time=Date.now()*0.005;
+ for(let y=0;y<rows;y++){
+  for(let x=0;x<cols;x++){
+   let t=grid[y][x];
+   if(t===1){
+     let wave=Math.sin(x*0.3+time)*2;
+     ctx.fillStyle="rgba(0,200,255,0.7)";
+     ctx.fillRect(x*CELL,y*CELL+wave,CELL,CELL);
+   }
+   if(t===2){
+     ctx.fillStyle="rgba(255,200,0,0.7)";
+     ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
+   }
+   if(t===3){
+     ctx.fillStyle="rgba(255,80,0,0.8)";
+     ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
+   }
+   if(t===4){
+     ctx.fillStyle="#666";
+     ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
+   }
+   if(t===5){
+     ctx.fillStyle="#999";
+     ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
+   }
+  }
+ }
+}
+
+function loop(){
+ update();
+ draw();
+ requestAnimationFrame(loop);
+}
+
+resize();
+loop();
+</script>
+</body>
+</html>
